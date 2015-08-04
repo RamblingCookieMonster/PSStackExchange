@@ -9,23 +9,28 @@
     .PARAMETER Object
         Type of object to query for. Accepts multiple parts.
         
-        Example: 'projects' or 'admin/mail-server'
+        Example: 'sites' or 'questions/unanswered'
 
     .PARAMETER Uri
-        The base Uri for Stash.  Defaults to $StashConfig.Uri
+        The base Uri for StackExchange.
         
-        Example: "https://Stash.contoso.com:8443"
+        Default: https://api.stackexchange.com
 
     .PARAMETER Body
         Hash table with query options for specific object
 
-        IMPORTANT: These are case sensitive
+        These don't appear to be case sensitive
 
-        Example for projects:
-            -Body @{ name = 'nameofproject' }
+        Example for recent powershell activity:
+            -Body @{
+                site  =  'stackoverflow'
+                tagged = 'powershell'
+                order =  'desc'
+                sort =   'activity'
+            }
 
     .PARAMETER Raw
-        If specified, do not extract the 'Values' attribute of the results.
+        If specified, do not extract the 'Items' attribute of the results.
 
     .PARAMETER Credential
         A valid PSCredential
@@ -62,13 +67,20 @@
     #>
     [cmdletbinding()]
     param(    
-        [string]$Object = "projects",
+        [string]$Object = "questions",
+        
         [string]$Uri = 'https://api.stackexchange.com',
+        
         [string]$Version = "2.0",
-        [int]$PageSize = 10,
-        [int]$MaxSize = 30,
+        
+        [int]$PageSize = 30,
+        
+        [int]$MaxResults,
+        
         [System.Management.Automation.PSCredential]$Credential,
+        
         [Hashtable]$Body,
+        
         [switch]$Raw
     )
 
@@ -87,14 +99,25 @@
         }
         if($PSBoundParameters.ContainsKey('Body'))
         {
+            if(-not $Body.Keys -contains 'pagesize')
+            {
+                $Body.pagesize = $PageSize
+            }
             $IRMParams.Add( 'Body', $Body )
         }
-        
+        else
+        {
+            $IRMParams.Add('Body',@{pagesize = $PageSize})
+        }
 
         $GSDParams = @{ IRMParams = $IRMParams }
         if($PSBoundParameters.ContainsKey('Raw'))
         {
             $GSDParams.Add( 'Raw', $Raw )
+        }
+        if($PSBoundParameters.ContainsKey('MaxResults'))
+        {
+            $GSDParams.Add( 'MaxResults', $MaxResults )
         }
 
     Write-Debug ( "Running $($MyInvocation.MyCommand).`n" +

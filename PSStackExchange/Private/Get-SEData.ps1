@@ -1,40 +1,52 @@
-﻿function Get-SEData
+﻿<#
+    Helper function to abstract out paging and extraction of 'items'
+#>
+
+function Get-SEData
 {
     [cmdletbinding()]
     param (
         $IRMParams,
         [switch]$Raw,
         $UseIWR,
-        $Page = 1,
-        $PageSize,
-        $MaxSize = 100
+        [int]$Pagesize,
+        [int]$Page = 1,
+        [int]$MaxResults = 50
     )
+
+    #Keep track of how many items we pull...
+    [int]$ResultsSoFar = 0
     
-    $Uri = $IRMParams.Uri
-
-    #Start at page
-    #Increment page
-
     do
     {
-        if($Page -eq 1)
+        #Init page and pagesize
+        if(-not $IRMParams.Body.ContainsKey('page'))
         {
-            if(-not $IRMParams.containskey('Body'))
-            {
-                $IRMParams.Add( 'Body', @{} )
-            }
             $IRMParams.Body.page = $Page
-            $IRMParams.Body.pagesize = $PageSize
         }
-        else
+        
+        #Don't reset pagesize if we set it as a remainder...
+        if($IRMParams.Body.ContainsKey('PageSize') -and $Pagesize)
         {
-            $IRMParams.Body.page = $IRMParams.Body.page + 1
+            # Override with the param, or a MaxResults - ResultSoFar remainder
+            $IRMParams.Body.Pagesize = $Pagesize
         }
-
+        elseif($IRMParams.Body.ContainsKey('PageSize'))
+        {
+            #Normal. Pagesize was specified. Pull it out for simplicity.
+            $Pagesize = $IRMParams.Body.Pagesize
+        }
+        elseif(-not $Pagesize)
+        {
+            #Weird. No pagesize or body pagesize set. Set it to 30.
+            $Pagesize = 30
+            $IRMParams.Body.Pagesize = $Pagesize
+        }
+        
         Try
         {
             $Err = $null
-            write-debug "Final $($IRMParams | Out-string)"
+            write-debug "Final $($IRMParams | Out-string) Body $($IRMParams.Body | Out-String)"
             
             #We might want to track the HTTP status code to verify success for non-gets...
             if($UseIWR)
@@ -65,11 +77,34 @@
             $TempResult
         }
 
+        #How many results have we seen?
+        [int]$ResultsSoFar += $Pagesize
+        $Page++
+
+        #Wow, forgot how painful math was...
+        Write-Debug "
+        ResultsSoFar = $ResultsSoFar
+        PageSize = $PageSize
+        Page++ = $Page
+        MaxResults = $MaxResults
+        (ResultsSoFar + PageSize) -gt MaxResults $(($ResultsSoFar + $PageSize) -gt $MaxResults)
+        ResultsSoFar -ne MaxResults $($ResultsSoFar -ne $MaxResults)
+        "
+
+        #Will the next loop put us over? Get the remainder and set it as pagesize
+        if(($ResultsSoFar + $PageSize) -ge $MaxResults -and $ResultsSoFar -ne $MaxResults)
+        {
+            $PageSize = $MaxResults - $ResultsSoFar
+            Write-Debug "PageSize Change to $PageSize"
+        }
+
+        #Loop readout
+        Write-Debug "TempResult.has_more: $($TempResult.has_more)Raw: $Raw`n Not TempResult.items = $(-not $TempResult.items)`n ResultSoFar -gt MaxResults: $ResultsSoFar -gt $MaxResults"
     }
     until (
         -not $TempResult.has_more -or
         $Raw -or 
         -not $TempResult.items -or
-        ($PageSize * ($Page + 1)) -gt $MaxSize
+        $ResultsSoFar -ge $MaxResults
     )
 }
