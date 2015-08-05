@@ -1,5 +1,7 @@
 ﻿<#
     Helper function to abstract out paging and extraction of 'items'
+        API docs:       https://api.stackexchange.com/docs
+        Paging details: https://api.stackexchange.com/docs/paging
 #>
 
 function Get-SEData
@@ -8,10 +10,9 @@ function Get-SEData
     param (
         $IRMParams,
         [switch]$Raw,
-        $UseIWR,
         [int]$Pagesize,
         [int]$Page = 1,
-        [int]$MaxResults = 50
+        [int]$MaxResults
     )
 
     #Keep track of how many items we pull...
@@ -19,12 +20,13 @@ function Get-SEData
     
     do
     {
-        #Init page and pagesize
-        if(-not $IRMParams.Body.ContainsKey('page'))
+        # If user specified page, and not first loop, don't touch it. Otherwise, set it!
+        if(-not ($ResultsSoFar -eq 0 -and -not $IRMParams.ContainsKey('page')))
         {
             $IRMParams.Body.page = $Page
         }
         
+        #init pagesize
         #Don't reset pagesize if we set it as a remainder...
         if($IRMParams.Body.ContainsKey('PageSize') -and $Pagesize)
         {
@@ -43,20 +45,14 @@ function Get-SEData
             $IRMParams.Body.Pagesize = $Pagesize
         }
         
+        #Collect the results
         Try
         {
-            $Err = $null
             write-debug "Final $($IRMParams | Out-string) Body $($IRMParams.Body | Out-String)"
             
             #We might want to track the HTTP status code to verify success for non-gets...
-            if($UseIWR)
-            {   
-                $TempResult = Invoke-WebRequest @IRMParams
-            }
-            else
-            {
-                $TempResult = Invoke-RestMethod @IRMParams -ErrorVariable Err
-            }
+            $TempResult = Invoke-RestMethod @IRMParams
+            
             Write-Debug "Raw:`n$($TempResult | Out-String)"
         }
         Catch
@@ -64,6 +60,7 @@ function Get-SEData
             Throw $_
         }
         
+        # raw, extract items, or... unexpected (no items prop)
         if($Raw)
         {
             $TempResult
@@ -83,13 +80,12 @@ function Get-SEData
 
         #Wow, forgot how painful math was...
         Write-Debug "
-        ResultsSoFar = $ResultsSoFar
-        PageSize = $PageSize
-        Page++ = $Page
-        MaxResults = $MaxResults
-        (ResultsSoFar + PageSize) -gt MaxResults $(($ResultsSoFar + $PageSize) -gt $MaxResults)
-        ResultsSoFar -ne MaxResults $($ResultsSoFar -ne $MaxResults)
-        "
+            ResultsSoFar = $ResultsSoFar
+            PageSize = $PageSize
+            Page++ = $Page
+            MaxResults = $MaxResults
+            (ResultsSoFar + PageSize) -gt MaxResults $(($ResultsSoFar + $PageSize) -gt $MaxResults)
+            ResultsSoFar -ne MaxResults $($ResultsSoFar -ne $MaxResults)"
 
         #Will the next loop put us over? Get the remainder and set it as pagesize
         if(($ResultsSoFar + $PageSize) -ge $MaxResults -and $ResultsSoFar -ne $MaxResults)
@@ -102,8 +98,8 @@ function Get-SEData
         Write-Debug "TempResult.has_more: $($TempResult.has_more)Raw: $Raw`n Not TempResult.items = $(-not $TempResult.items)`n ResultSoFar -gt MaxResults: $ResultsSoFar -gt $MaxResults"
     }
     until (
-        -not $TempResult.has_more -or
-        $Raw -or 
+        $TempResult.has_more -ne $true -or
+        $Raw -or
         -not $TempResult.items -or
         $ResultsSoFar -ge $MaxResults
     )

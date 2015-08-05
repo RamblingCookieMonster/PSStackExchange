@@ -1,20 +1,37 @@
-﻿Function Get-SEObject {
+﻿Function Get-SEQuestion {
     <#
     .SYNOPSIS
-        Get a specified object from StackExchange
+        Get a question from StackExchange
     
     .DESCRIPTION
-        Get a specified object from StackExchange
+        Get a question from StackExchange
 
     .PARAMETER Object
         Type of object to query for. Accepts multiple parts.
         
         Example: 'sites' or 'questions/unanswered'
 
-    .PARAMETER Uri
-        The base Uri for StackExchange.
-        
-        Default: https://api.stackexchange.com
+    .PARAMETER Site
+        StackExchange site question. Default is stackoverflow
+
+    .PARAMETER Tagged
+        Search by tag
+
+        Limited to 5 tags
+
+    .PARAMETER Order
+        Ascending or Descending
+
+    .PARAMETER Sort
+        Sorting method:
+            activity
+            creation
+            votes
+            hot
+            week
+            month
+
+        Details here: https://api.stackexchange.com/docs/questions
 
     .PARAMETER Body
         Hash table with query options for specific object
