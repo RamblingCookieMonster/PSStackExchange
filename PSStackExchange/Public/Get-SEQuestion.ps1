@@ -6,18 +6,22 @@
     .DESCRIPTION
         Get a question from StackExchange
 
-    .PARAMETER Object
-        Type of object to query for. Accepts multiple parts.
-        
-        Example: 'sites' or 'questions/unanswered'
-
     .PARAMETER Site
         StackExchange site question. Default is stackoverflow
 
-    .PARAMETER Tagged
+    .PARAMETER Tag
         Search by tag
 
         Limited to 5 tags
+
+    .PARAMETER Unanswered
+        Return only questions not marked as answered
+
+    .PARAMETER NoAnswers
+        Return only questions with no answers
+
+    .PARAMETER Featured
+        Return only featured questions
 
     .PARAMETER Order
         Ascending or Descending
@@ -31,7 +35,19 @@
             week
             month
 
-        Details here: https://api.stackexchange.com/docs/questions
+    .PARAMETER Uri
+        The base Uri for the StackExchange API.
+        
+        Default: https://api.stackexchange.com
+
+    .PARAMETER Version
+        The StackExchange API version to use.
+
+    .PARAMETER PageSize
+        Items to retrieve per query
+
+    .PARAMETER MaxResults
+        Maximum number of items to return
 
     .PARAMETER Body
         Hash table with query options for specific object
@@ -66,61 +82,68 @@
 
     .FUNCTIONALITY
         StackExchange
+
+    .LINK
+        https://api.stackexchange.com/docs/questions
     #>
     [cmdletbinding()]
-    param(    
-        [string]$Object = "questions",
+    param(
+        [switch]$UnAnswered,
+        [switch]$Featured,
+        [switch]$NoAnswers,
+        [string]$Site = 'stackoverflow',
+        [ValidateCount(0,5)]
+        [string[]]$Tag,
+        [datetime]$FromDate,
+        [datetime]$ToDate,
+        [ValidateSet('asc', 'desc')]
+        [string]$Order,
+        [ValidateSet('Activity', 'Creation', 'Votes', 'Hot', 'Week', 'Month')]
+        [string]$Sort,
         [string]$Uri = 'https://api.stackexchange.com',
-        [string]$Version = "2.0",
-        [validaterange(1,100)][int]$PageSize = 30,
-        [int]$MaxResults = [int]::MaxValue,        
-        [Hashtable]$Body,
+        [string]$Version = "2.2",
+        [ValidateRange(1,100)][int]$PageSize = 30,
+        [int]$MaxResults = 100,        
+        [Hashtable]$Body = @{},
         [switch]$Raw
     )
 
-    #This code basically wraps a call to the private Get-SEData function
+    # This code basically wraps a call to the private Get-SEData function
+    # Build up the URI
+        [string]$Object = "questions"
+        if     ($Unanswered) { $Object = Join-Parts -Separator '/' -Parts $Object/unanswered }
+        elseif ($Featured)   { $Object = Join-Parts -Separator '/' -Parts $Object/Featured   }
+        elseif ($NoAnswers)  { $Object = Join-Parts -Separator '/' -Parts $Object/no-answers }
+    
+    # Build up the CGI
+    # We override existing items in body
+        if($Tags) { $Body.Tagged = $Tags -Join ';' }
+        if($Sort) { $Body.Sort = $Sort }
+        if($Order) { $Body.Order = $Order }
+        if($FromDate) { $Body.FromDate = ConvertTo-UnixDate -Date $FromDate}
+        if($ToDate) { $Body.ToDate = ConvertTo-UnixDate -Date $ToDate }
+        $Body.site = $Site
 
-    #Build up URI
-        $BaseUri = Join-Parts -Separator "/" -Parts $Uri, $Version, $($object.ToLower())
-
-    #Build up Invoke-RestMethod and Get-SEData parameters for splatting
-        $IRMParams = @{
-            ErrorAction = 'Stop'
-            Uri = $BaseUri
-            Method = 'Get'
+    # Build up Get-StackObject parameters
+        $GSOParams = @{
+            Object = $Object
+            Uri = $Uri
+            Version = $Version
+            Pagesize = $PageSize
+            MaxResults = $MaxResults
         }
-        
-        if($PSBoundParameters.ContainsKey('Body'))
-        {
-            if(-not $Body.Keys -contains 'pagesize')
-            {
-                $Body.pagesize = $PageSize
-            }
-            $IRMParams.Add( 'Body', $Body )
-        }
-        else
-        {
-            $IRMParams.Add('Body',@{pagesize = $PageSize})
-        }
-
-        $GSDParams = @{ 
-            IRMParams = $IRMParams
-            MaxResults = $MaxResults    
-        }
-        if($PSBoundParameters.ContainsKey('Raw'))
-        {
-            $GSDParams.Add( 'Raw', $Raw )
-        }
+        if($Body.Keys.Count -gt 0) {$GSOParams.Body = $Body }
+        if($Raw) {$GSOParams.Raw = $True}
 
     Write-Debug ( "Running $($MyInvocation.MyCommand).`n" +
-                    "PSBoundParameters:$( $PSBoundParameters | Format-List | Out-String)" +
-                    "Invoke-RestMethod parameters:`n$($IRMParams | Format-List | Out-String)" +
-                    "Get-SEData parameters:`n$($GSDParams | Format-List | Out-String)" )
+                    "PSBoundParameters:`n$($PSBoundParameters | Format-List | Out-String)" +
+                    "Get-SEObject parameters:`n$($GSOParams | Format-List | Out-String)" )
+
 
     Try
     {
-        #Get the data from Stash
-        Get-SEData @GSDParams
+        #Get the data from StackExchange
+        Get-SEObject @GSOParams
     }
     Catch
     {

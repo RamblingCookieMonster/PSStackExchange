@@ -12,9 +12,18 @@
         Example: 'sites' or 'questions/unanswered'
 
     .PARAMETER Uri
-        The base Uri for StackExchange.
+        The base Uri for the StackExchange API.
         
         Default: https://api.stackexchange.com
+
+    .PARAMETER Version
+        The StackExchange API version to use.
+
+    .PARAMETER PageSize
+        Items to retrieve per query
+
+    .PARAMETER MaxResults
+        Maximum number of items to return
 
     .PARAMETER Body
         Hash table with query options for specific object
@@ -54,7 +63,7 @@
     param(    
         [string]$Object = "questions",
         [string]$Uri = 'https://api.stackexchange.com',
-        [string]$Version = "2.0",
+        [string]$Version = "2.2",
         [validaterange(1,100)][int]$PageSize = 30,
         [int]$MaxResults = [int]::MaxValue,        
         [Hashtable]$Body,

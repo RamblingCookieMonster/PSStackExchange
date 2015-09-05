@@ -31,18 +31,18 @@ function Get-SEData
         if($IRMParams.Body.ContainsKey('PageSize') -and $Pagesize)
         {
             # Override with the param, or a MaxResults - ResultSoFar remainder
-            $IRMParams.Body.Pagesize = $Pagesize
+            $IRMParams.Body.pagesize = $Pagesize
         }
         elseif($IRMParams.Body.ContainsKey('PageSize'))
         {
             #Normal. Pagesize was specified. Pull it out for simplicity.
-            $Pagesize = $IRMParams.Body.Pagesize
+            $Pagesize = $IRMParams.Body.pagesize
         }
         elseif(-not $Pagesize)
         {
             #Weird. No pagesize or body pagesize set. Set it to 30.
             $Pagesize = 30
-            $IRMParams.Body.Pagesize = $Pagesize
+            $IRMParams.Body.pagesize = $Pagesize
         }
         
         #Collect the results
