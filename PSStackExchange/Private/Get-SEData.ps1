@@ -17,7 +17,7 @@ function Get-SEData
 
     #Keep track of how many items we pull...
     [int]$ResultsSoFar = 0
-    
+
     do
     {
         # If user specified page, and not first loop, don't touch it. Otherwise, set it!
@@ -43,6 +43,12 @@ function Get-SEData
             #Weird. No pagesize or body pagesize set. Set it to 30.
             $Pagesize = 30
             $IRMParams.Body.pagesize = $Pagesize
+        }
+
+        # First run and maxresults is lower than pagesize? Overruled!
+        if($ResultsSoFar -eq 0 -and $Pagesize -gt $MaxResults)
+        {
+            $IRMParams.Body.pagesize = $Pagesize = $MaxResults
         }
         
         #Collect the results

@@ -1,0 +1,11 @@
+PSTOPIC
+    about_PSStackExchange
+
+SHORT DESCRIPTION
+    PSStackExchange allows you to work with the Stack Exchange API through PowerShell functions
+
+LONG DESCRIPTION
+    PSStackExchange allows you to work with the Stack Exchange API through PowerShell functions
+
+    You can find API documentation here:
+        https://api.stackexchange.com/docs

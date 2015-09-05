@@ -143,7 +143,16 @@
     Try
     {
         #Get the data from StackExchange
-        Get-SEObject @GSOParams
+        Get-SEObject @GSOParams | ForEach-Object {
+
+                #Add formatting and convert dates to expected format
+                Add-ObjectDetail -InputObject $_ -TypeName 'PSStackExchange.Question' -PropertyToAdd @{
+                    CreationDate = ConvertFrom-UnixDate -Date $_.creation_date
+                    LastActivityDate = ConvertFrom-UnixDate -Date $_.last_activity_date
+                    LastEditDate = ConvertFrom-UnixDate -Date $_.last_edit_date
+                }
+            }     
+        
     }
     Catch
     {
