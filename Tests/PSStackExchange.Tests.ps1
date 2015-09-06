@@ -8,7 +8,7 @@ $PSVersion = $PSVersionTable.PSVersion.Major
 Import-Module $PSScriptRoot\..\PSStackExchange -Force
 
 #Integration test example
-<# Describe "Get-SEObject PS$PSVersion Integrations tests" {
+Describe "Get-SEObject PS$PSVersion Integrations tests" {
 
     Context 'Strict mode' { 
 
@@ -21,8 +21,7 @@ Import-Module $PSScriptRoot\..\PSStackExchange -Force
         }
     }
 }
-#>
-$Global:blah = $null
+
 #Unit test example
 Describe "Get-SEObject PS$PSVersion Unit tests" {
 
@@ -33,7 +32,6 @@ Describe "Get-SEObject PS$PSVersion Unit tests" {
 
         It 'should call Get-SEData' {
             $Output = Get-SEObject -Object sites
-            $Global:Blah = $Output
             Assert-MockCalled -CommandName Get-SEData -Scope It -ModuleName PSStackExchange
         }
 

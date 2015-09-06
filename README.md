@@ -1,9 +1,11 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/xyl9iyopvbucvpbi/branch/master?svg=true)](https://ci.appveyor.com/project/RamblingCookieMonster/psstackexchange/branch/master)
+
 PSStackExchange
 =============
 
-This is a rudimentary PowerShell module for querying the [Stack Exchange API](https://api.stackexchange.com/docs).
+This is a rudimentary PowerShell module for querying the [Stack Exchange API](https://api.stackexchange.com/docs), written to illustrate [a basic PowerShell module organization and workflow](http://ramblingcookiemonster.github.io/Building-A-PowerShell-Module).
 
-It was written to illustrate a basic PowerShell module organization and workflow. It's not fully featured, but pull requests would be welcome!
+This is not fully featured or tested, but pull requests would be welcome!
 
 #Instructions
 
