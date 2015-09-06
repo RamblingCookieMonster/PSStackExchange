@@ -1,5 +1,3 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/cew1v6k58hvfiseo/branch/master?svg=true)](https://ci.appveyor.com/project/RamblingCookieMonster/psexcel)
-
 PSStackExchange
 =============
 
