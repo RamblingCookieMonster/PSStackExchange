@@ -2,13 +2,13 @@
     <#
     .SYNOPSIS
         Search a StackExchange site for questions
-    
+
     .DESCRIPTION
         Search a StackExchange site for questions
 
     .PARAMETER Title
         Text which must appear in returned questions' titles
-    
+
     .PARAMETER Site
         StackExchange site. Default is stackoverflow
 
@@ -24,7 +24,7 @@
 
     .PARAMETER BodyText
         Text which must appear in returned questions' bodies
-    
+
     .PARAMETER Closed
         True to return only closed questions, false to return only open ones.
 
@@ -43,8 +43,14 @@
     .PARAMETER User
         The id of the user who must own the questions returned
 
-    .PARAMETER URL 
+    .PARAMETER URL
         A url which must be contained in a post, may include a wildcard
+
+    .PARAMETER FromDate
+        Return only questions posted after this date
+
+    .PARAMETER ToDate
+        Return only questions posted before this date
 
     .PARAMETER Order
         Ascending or Descending
@@ -55,6 +61,22 @@
             creation:  creation_date
             votes:     score
             relevance: matches the relevance tab on the site itself
+
+    .PARAMETER Uri
+        The base Uri for the StackExchange API.
+
+        Default: https://api.stackexchange.com
+
+    .PARAMETER Version
+        The StackExchange API version to use.
+
+    .PARAMETER PageSize
+        Items to retrieve per query. Defaults to 30
+
+    .PARAMETER MaxResults
+        Maximum number of items to return. Defaults to 100
+
+        Specify $null or 0 to set this to the maximum value
 
     .PARAMETER Body
         Hash table with query options for specific object
@@ -68,18 +90,62 @@
                 order =  'desc'
                 sort =   'activity'
             }
-        
-    .PARAMETER Raw
-        If specified, do not extract the 'Items' attribute of the results.
 
     .FUNCTIONALITY
         StackExchange
+
+    .EXAMPLE
+        Search-SEQuestion -Title Citrix -Tag PowerShell
+
+        # Search for questions with Citrix in the title
+        #    Posted on stackoverflow (default)
+        #    Tagged PowerShell
+
+    .EXAMPLE
+        Search-SEQuestion -User 105072 ` 
+                          -Site ServerFault ` 
+                          -ExcludeTag 'windows-server-2008-r2' ` 
+                          -Title PowerShell
+
+        # Search for questions from ServerFault User with ID 105072
+        #    On the ServerFault site
+        #    Excluding anything tagged with server 2008 r2
+        #    Including items with PowerShell in the title
+
+    .EXAMPLE
+        Search-SEQuestion -URL *github.com/RamblingCookieMonster/*
+
+        # Search for questions including the partial URL github.com/RamblingCookieMonster/
+        #    Posted on stackoverflow (default)
+
+        # If you post code on the internet, this is a great way to see if folks are having trouble with it
+
+    .EXAMPLE
+        Search-SEQuestion -Tag PowerShell -Accepted $False -Sort Creation -MaxResults 20 |
+            Out-GridView -PassThru |
+            Foreach {
+                & 'C:\Program Files\Internet Explorer\iexplore.exe' $_.link
+            }
+        
+        # Search for questions tagged PowerShell
+        #    Posted on stackoverflow (default)
+        #    That do not have an accepted answer
+        #    sorted by creation date
+        #    Limited to the first 20 results
+        #    Send output to a gridview
+        #    Open the selected questions in IE
+
+    .LINK
+        http://ramblingcookiemonster.github.io/Building-A-PowerShell-Module
 
     .LINK
         https://github.com/RamblingCookieMonster/PSStackExchange
 
     .LINK
         https://api.stackexchange.com/docs/advanced-search
+
+    .LINK
+        https://api.stackexchange.com/docs/questions
 
     #>
     [cmdletbinding()]
@@ -108,8 +174,7 @@
         [string]$Version = "2.2",
         [ValidateRange(1,100)][int]$PageSize = 30,
         [int]$MaxResults = 100,        
-        [Hashtable]$Body = @{},
-        [switch]$Raw
+        [Hashtable]$Body = @{}
     )
 
     # This code basically wraps a call to Get-SEObject function
@@ -146,7 +211,6 @@
             MaxResults = $MaxResults
         }
         if($Body.Keys.Count -gt 0) {$GSOParams.Body = $Body }
-        if($Raw) {$GSOParams.Raw = $True}
 
     Write-Debug ( "Running $($MyInvocation.MyCommand).`n" +
                     "PSBoundParameters:`n$($PSBoundParameters | Format-List | Out-String)" +
@@ -158,13 +222,14 @@
         #Get the data from StackExchange
         Get-SEObject @GSOParams | ForEach-Object {
 
-                #Add formatting and convert dates to expected format
-                Add-ObjectDetail -InputObject $_ -TypeName 'PSStackExchange.Question' -PropertyToAdd @{
-                    CreationDate = ConvertFrom-UnixDate -Date $_.creation_date
-                    LastActivityDate = ConvertFrom-UnixDate -Date $_.last_activity_date
-                    LastEditDate = ConvertFrom-UnixDate -Date $_.last_edit_date
-                }
-            }    
+            #Add formatting and convert dates to expected format
+            Add-ObjectDetail -InputObject $_ -TypeName 'PSStackExchange.Question' -PropertyToAdd @{
+                CreationDate = ConvertFrom-UnixDate -Date $_.creation_date
+                LastActivityDate = ConvertFrom-UnixDate -Date $_.last_activity_date
+                LastEditDate = ConvertFrom-UnixDate -Date $_.last_edit_date
+                SESite = $Site
+            }
+        }    
     }
     Catch
     {

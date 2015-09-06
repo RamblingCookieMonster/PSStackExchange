@@ -9,3 +9,10 @@ LONG DESCRIPTION
 
     You can find API documentation here:
         https://api.stackexchange.com/docs
+
+DETAILED DESCRIPTION
+    This is a rudimentary module that allows querying for arbitrary Stack Exchange API objects. It also implements searching or retrieving questions, and retrieving answers.
+
+    Objects returned from SEQuestion and SEAnswer functions use formatting that hides properties from the default view. You can explore these objects like any other PowerShell object.
+
+    Objects returned from SEQuestion have an artificial SESite property added, allowing you to pipe SEQuestion output to Get-SEAnswer.

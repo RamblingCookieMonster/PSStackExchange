@@ -2,6 +2,9 @@
     Helper function to abstract out paging and extraction of 'items'
         API docs:       https://api.stackexchange.com/docs
         Paging details: https://api.stackexchange.com/docs/paging
+
+    Note: Explicitly removed functionality to limit pagesize on final call based on MaxResults.
+          If the pagesize is changed, it breaks paging / sorting
 #>
 
 function Get-SEData
@@ -9,8 +12,7 @@ function Get-SEData
     [cmdletbinding()]
     param (
         $IRMParams,
-        [switch]$Raw,
-        [int]$Pagesize,
+        [int]$Pagesize = 30,
         [int]$Page = 1,
         [int]$MaxResults
     )
@@ -21,27 +23,20 @@ function Get-SEData
     do
     {
         # If user specified page, and not first loop, don't touch it. Otherwise, set it!
-        if(-not ($ResultsSoFar -eq 0 -and -not $IRMParams.ContainsKey('page')))
+        if(-not ($ResultsSoFar -eq 0 -and $IRMParams.ContainsKey('page')))
         {
             $IRMParams.Body.page = $Page
         }
-        
+
         #init pagesize
-        #Don't reset pagesize if we set it as a remainder...
-        if($IRMParams.Body.ContainsKey('PageSize') -and $Pagesize)
-        {
-            # Override with the param, or a MaxResults - ResultSoFar remainder
-            $IRMParams.Body.pagesize = $Pagesize
-        }
-        elseif($IRMParams.Body.ContainsKey('PageSize'))
+        if($IRMParams.Body.ContainsKey('PageSize'))
         {
             #Normal. Pagesize was specified. Pull it out for simplicity.
             $Pagesize = $IRMParams.Body.pagesize
         }
-        elseif(-not $Pagesize)
+        else
         {
-            #Weird. No pagesize or body pagesize set. Set it to 30.
-            $Pagesize = 30
+            #Something odd happened. Pagesize should have been specified.
             $IRMParams.Body.pagesize = $Pagesize
         }
 
@@ -50,32 +45,27 @@ function Get-SEData
         {
             $IRMParams.Body.pagesize = $Pagesize = $MaxResults
         }
-        
+
         #Collect the results
         Try
         {
             write-debug "Final $($IRMParams | Out-string) Body $($IRMParams.Body | Out-String)"
-            
+
             #We might want to track the HTTP status code to verify success for non-gets...
             $TempResult = Invoke-RestMethod @IRMParams
-            
+
             Write-Debug "Raw:`n$($TempResult | Out-String)"
         }
         Catch
         {
             Throw $_
         }
-        
-        # raw, extract items, or... unexpected (no items prop)
-        if($Raw)
-        {
-            $TempResult
-        }
-        elseif($TempResult.PSObject.Properties.Name -contains 'items')
+
+        if($TempResult.PSObject.Properties.Name -contains 'items')
         {
             $TempResult.items
         }
-        else
+        else # what is going on!
         {
             $TempResult
         }
@@ -84,7 +74,6 @@ function Get-SEData
         [int]$ResultsSoFar += $Pagesize
         $Page++
 
-        #Wow, forgot how painful math was...
         Write-Debug "
             ResultsSoFar = $ResultsSoFar
             PageSize = $PageSize
@@ -93,19 +82,11 @@ function Get-SEData
             (ResultsSoFar + PageSize) -gt MaxResults $(($ResultsSoFar + $PageSize) -gt $MaxResults)
             ResultsSoFar -ne MaxResults $($ResultsSoFar -ne $MaxResults)"
 
-        #Will the next loop put us over? Get the remainder and set it as pagesize
-        if(($ResultsSoFar + $PageSize) -ge $MaxResults -and $ResultsSoFar -ne $MaxResults)
-        {
-            $PageSize = $MaxResults - $ResultsSoFar
-            Write-Debug "PageSize Change to $PageSize"
-        }
-
         #Loop readout
-        Write-Debug "TempResult.has_more: $($TempResult.has_more)Raw: $Raw`n Not TempResult.items = $(-not $TempResult.items)`n ResultSoFar -gt MaxResults: $ResultsSoFar -gt $MaxResults"
+        Write-Debug "TempResult.has_more: $($TempResult.has_more)`n Not TempResult.items = $(-not $TempResult.items)`n ResultSoFar -gt MaxResults: $ResultsSoFar -gt $MaxResults"
     }
     until (
         $TempResult.has_more -ne $true -or
-        $Raw -or
         -not $TempResult.items -or
         $ResultsSoFar -ge $MaxResults
     )

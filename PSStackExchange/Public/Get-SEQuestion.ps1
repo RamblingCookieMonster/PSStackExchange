@@ -1,13 +1,13 @@
 ﻿Function Get-SEQuestion {
     <#
     .SYNOPSIS
-        Get a question from StackExchange
-    
+        Get questions from StackExchange
+
     .DESCRIPTION
-        Get a question from StackExchange
+        Get questions from StackExchange
 
     .PARAMETER Site
-        StackExchange site question. Default is stackoverflow
+        StackExchange site to get questions from. Default is stackoverflow
 
     .PARAMETER Tag
         Search by tag
@@ -23,6 +23,12 @@
     .PARAMETER Featured
         Return only featured questions
 
+    .PARAMETER FromDate
+        Return only questions posted after this date
+
+    .PARAMETER ToDate
+        Return only questions posted before this date
+
     .PARAMETER Order
         Ascending or Descending
 
@@ -37,17 +43,19 @@
 
     .PARAMETER Uri
         The base Uri for the StackExchange API.
-        
+
         Default: https://api.stackexchange.com
 
     .PARAMETER Version
         The StackExchange API version to use.
 
     .PARAMETER PageSize
-        Items to retrieve per query
+        Items to retrieve per query. Defaults to 30
 
     .PARAMETER MaxResults
-        Maximum number of items to return
+        Maximum number of items to return. Defaults to 100
+
+        Specify $null or 0 to set this to the maximum value
 
     .PARAMETER Body
         Hash table with query options for specific object
@@ -62,26 +70,36 @@
                 sort =   'activity'
             }
 
-    .PARAMETER Raw
-        If specified, do not extract the 'Items' attribute of the results.
-
     .EXAMPLE
-        Get-SEObject Sites 
+        Get-SEObject Sites
 
         # List sites on StackExchange
 
     .EXAMPLE
-        Get-SEObject -Object questions/unanswered -MaxResults 50 -Body @{
-            site='stackoverflow'
-            tagged='powershell'
-            order='desc'
-            sort='creation'
-        }
+        Get-SEQuestion -UnAnswered -Tag PowerShell -FromDate $(Get-Date).AddDays(-1) -Site ServerFault
 
-        # Get the most recent 50 unanswered questions from stackoverflow, tagged powershell
+        # Get unanswered questions...
+        #    Tagged PowerShell...
+        #    From the past day...
+        #    From the ServerFault site
+
+    .EXAMPLE
+
+        Get-SEQuestion -Featured -Tag PowerShell -Site StackOverflow -MaxResults 20
+
+        # Get featured questions...
+        #    Tagged PowerShell...
+        #    From the stackoverflow site
+        #    Limited to 20 items
 
     .FUNCTIONALITY
         StackExchange
+
+    .LINK
+        http://ramblingcookiemonster.github.io/Building-A-PowerShell-Module
+
+    .LINK
+        https://github.com/RamblingCookieMonster/PSStackExchange
 
     .LINK
         https://api.stackexchange.com/docs/questions
@@ -103,9 +121,8 @@
         [string]$Uri = 'https://api.stackexchange.com',
         [string]$Version = "2.2",
         [ValidateRange(1,100)][int]$PageSize = 30,
-        [int]$MaxResults = 100,        
-        [Hashtable]$Body = @{},
-        [switch]$Raw
+        [int]$MaxResults = 100,
+        [Hashtable]$Body = @{}
     )
 
     # This code basically wraps a call to the private Get-SEData function
@@ -114,10 +131,10 @@
         if     ($Unanswered) { $Object = Join-Parts -Separator '/' -Parts $Object/unanswered }
         elseif ($Featured)   { $Object = Join-Parts -Separator '/' -Parts $Object/Featured   }
         elseif ($NoAnswers)  { $Object = Join-Parts -Separator '/' -Parts $Object/no-answers }
-    
+
     # Build up the CGI
     # We override existing items in body
-        if($Tags) { $Body.Tagged = $Tags -Join ';' }
+        if($Tag) { $Body.Tagged = $Tag -Join ';' }
         if($Sort) { $Body.Sort = $Sort }
         if($Order) { $Body.Order = $Order }
         if($FromDate) { $Body.FromDate = ConvertTo-UnixDate -Date $FromDate}
@@ -133,7 +150,6 @@
             MaxResults = $MaxResults
         }
         if($Body.Keys.Count -gt 0) {$GSOParams.Body = $Body }
-        if($Raw) {$GSOParams.Raw = $True}
 
     Write-Debug ( "Running $($MyInvocation.MyCommand).`n" +
                     "PSBoundParameters:`n$($PSBoundParameters | Format-List | Out-String)" +
@@ -145,14 +161,14 @@
         #Get the data from StackExchange
         Get-SEObject @GSOParams | ForEach-Object {
 
-                #Add formatting and convert dates to expected format
-                Add-ObjectDetail -InputObject $_ -TypeName 'PSStackExchange.Question' -PropertyToAdd @{
-                    CreationDate = ConvertFrom-UnixDate -Date $_.creation_date
-                    LastActivityDate = ConvertFrom-UnixDate -Date $_.last_activity_date
-                    LastEditDate = ConvertFrom-UnixDate -Date $_.last_edit_date
-                }
-            }     
-        
+            #Add formatting and convert dates to expected format
+            Add-ObjectDetail -InputObject $_ -TypeName 'PSStackExchange.Question' -PropertyToAdd @{
+                CreationDate = ConvertFrom-UnixDate -Date $_.creation_date
+                LastActivityDate = ConvertFrom-UnixDate -Date $_.last_activity_date
+                LastEditDate = ConvertFrom-UnixDate -Date $_.last_edit_date
+                SESite = $Site
+            }
+        }     
     }
     Catch
     {

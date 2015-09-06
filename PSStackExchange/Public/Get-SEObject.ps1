@@ -1,29 +1,31 @@
 ﻿Function Get-SEObject {
     <#
     .SYNOPSIS
-        Get a specified object from StackExchange
-    
+        Get an object from StackExchange
+
     .DESCRIPTION
-        Get a specified object from StackExchange
+        Get an object from StackExchange
 
     .PARAMETER Object
         Type of object to query for. Accepts multiple parts.
-        
+
         Example: 'sites' or 'questions/unanswered'
 
     .PARAMETER Uri
         The base Uri for the StackExchange API.
-        
+
         Default: https://api.stackexchange.com
 
     .PARAMETER Version
         The StackExchange API version to use.
 
     .PARAMETER PageSize
-        Items to retrieve per query
+        Items to retrieve per query. Defaults to 30
 
     .PARAMETER MaxResults
-        Maximum number of items to return
+        Maximum number of items to return. Defaults to 100
+
+        Specify $null or 0 to set this to the maximum value
 
     .PARAMETER Body
         Hash table with query options for specific object
@@ -38,11 +40,8 @@
                 sort =   'activity'
             }
 
-    .PARAMETER Raw
-        If specified, do not extract the 'Items' attribute of the results.
-
     .EXAMPLE
-        Get-SEObject Sites 
+        Get-SEObject Sites
 
         # List sites on StackExchange
 
@@ -58,19 +57,34 @@
 
     .FUNCTIONALITY
         StackExchange
+
+    .LINK
+        http://ramblingcookiemonster.github.io/Building-A-PowerShell-Module
+
+    .LINK
+        https://github.com/RamblingCookieMonster/PSStackExchange
+
+    .LINK
+        https://api.stackexchange.com/docs?tab=category#docs
+
     #>
     [cmdletbinding()]
-    param(    
+    param(
         [string]$Object = "questions",
         [string]$Uri = 'https://api.stackexchange.com',
         [string]$Version = "2.2",
         [validaterange(1,100)][int]$PageSize = 30,
         [int]$MaxResults = [int]::MaxValue,        
-        [Hashtable]$Body,
-        [switch]$Raw
+        [Hashtable]$Body
     )
 
     #This code basically wraps a call to the private Get-SEData function
+
+    #Null or 0 specified? return max results!
+        if($MaxResults -eq 0)
+        {
+            $MaxResults = [int]::MaxValue
+        }
 
     #Build up URI
         $BaseUri = Join-Parts -Separator "/" -Parts $Uri, $Version, $($object.ToLower())
@@ -81,7 +95,7 @@
             Uri = $BaseUri
             Method = 'Get'
         }
-        
+
         if($PSBoundParameters.ContainsKey('Body'))
         {
             if(-not $Body.Keys -contains 'pagesize')
@@ -98,10 +112,6 @@
         $GSDParams = @{ 
             IRMParams = $IRMParams
             MaxResults = $MaxResults    
-        }
-        if($PSBoundParameters.ContainsKey('Raw'))
-        {
-            $GSDParams.Add( 'Raw', $Raw )
         }
 
     Write-Debug ( "Running $($MyInvocation.MyCommand).`n" +
