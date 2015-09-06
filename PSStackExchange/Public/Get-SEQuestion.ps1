@@ -84,7 +84,6 @@
         #    From the ServerFault site
 
     .EXAMPLE
-
         Get-SEQuestion -Featured -Tag PowerShell -Site StackOverflow -MaxResults 20
 
         # Get featured questions...
@@ -103,6 +102,15 @@
 
     .LINK
         https://api.stackexchange.com/docs/questions
+
+    .LINK
+        Get-SEAnswer
+
+    .LINK
+        Search-SEQuestion
+
+    .LINK
+        Get-SEObject
     #>
     [cmdletbinding()]
     param(

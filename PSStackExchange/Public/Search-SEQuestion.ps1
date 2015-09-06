@@ -135,6 +135,12 @@
         #    Send output to a gridview
         #    Open the selected questions in IE
 
+    .EXAMPLE
+        Search-SEQuestion -Title 'system.dbnull' -tag powershell | Get-SEAnswer
+
+        # Search for a question tagged PowerShell, with System.DBNull in the title
+        # Get the answers for any questions that come back
+
     .LINK
         http://ramblingcookiemonster.github.io/Building-A-PowerShell-Module
 
@@ -146,6 +152,15 @@
 
     .LINK
         https://api.stackexchange.com/docs/questions
+
+    .LINK
+        Get-SEAnswer
+
+    .LINK
+        Get-SEQuestion
+
+    .LINK
+        Get-SEObject
 
     #>
     [cmdletbinding()]

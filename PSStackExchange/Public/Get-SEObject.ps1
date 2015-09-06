@@ -67,6 +67,14 @@
     .LINK
         https://api.stackexchange.com/docs?tab=category#docs
 
+    .LINK
+        Get-SEAnswer
+
+    .LINK
+        Get-SEQuestion
+
+    .LINK
+        Search-SEQuestion
     #>
     [cmdletbinding()]
     param(

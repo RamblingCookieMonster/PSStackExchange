@@ -83,6 +83,15 @@
 
     .LINK
         https://api.stackexchange.com/docs/answers
+
+    .LINK
+        Get-SEQuestion
+
+    .LINK
+        Search-SEQuestion
+
+    .LINK
+        Get-SEObject
     #>
     [cmdletbinding()]
     param(
